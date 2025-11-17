@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMAGERY</title>
+    <!-- লোড টেইলউইন্ড সিএসএস -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- লোড লুসাইড আইকন -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* কাস্টম গ্লো ইফেক্ট */
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 5px rgba(45, 201, 133, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(45, 201, 133, 0.8); }
+        }
+        .btn-glow {
+            animation: glow 2.5s infinite ease-in-out;
+            box-shadow: 0 0 5px rgba(45, 201, 133, 0.5);
+        }
+        /* কাস্টম স্পিনার */
+        .spinner {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: 8px solid #4A5568; /* bg-gray-700 */
+            border-top-color: #34D399; /* text-green-400 */
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        /* কাস্টম স্ক্রলবার */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1a1a1a; }
+        ::-webkit-scrollbar-thumb { background: #4a4a4a; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #5a5a5a; }
+        
+        /* প্রম্পট বাটন পজিশনিং */
+        .prompt-container {
+            position: relative;
+        }
+        .prompt-buttons {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            display: flex;
+            gap: 4px;
+            z-index: 10;
+        }
+        .prompt-textarea {
+            padding-top: 40px; /* বাটনগুলোর জন্য জায়গা */
+        }
+        
+        /* ড্রপডাউন মেনু স্টাইল */
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            background-color: #2d2d2d;
+            border: 1px solid #4a4a4a;
+            border-radius: 8px;
+            width: 250px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 50;
+            bottom: 100%; /* টেক্সটবক্সের উপরে দেখাবে */
+            margin-bottom: 5px;
+            right: 0;
+        }
+        .dropdown-menu.show {
+            display: block;
+        }
+        .dropdown-item {
+            padding: 10px 15px;
+            color: #e0e0e0;
+            cursor: pointer;
+            border-bottom: 1px solid #4a4a4a;
+            font-size: 12px;
+        }
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+        .dropdown-item:hover {
+            background-color: #3a3a3a;
+        }
+        .dropdown-item strong {
+            color: #34D399; /* সবুজ */
+            display: block;
+            font-size: 13px;
+            margin-bottom: 3px;
+        }
+    </style>
+</head>
+<body class="bg-[#121212] text-gray-200 flex flex-col h-screen overflow-hidden">
+
+    <!-- হেডার (ডেস্কটপ) -->
+    <header class="hidden md:flex bg-[#1a1a1a] border-b border-gray-700 px-4 py-2 items-center justify-between flex-shrink-0">
+        <div class="flex items-center space-x-3">
+            <span class="text-xl font-bold text-green-500">IMAGERY</span>
+        </div>
+        <button id="view-all-btn-desktop" class="p-2 rounded-lg hover:bg-gray-700" aria-label="View All Generated Images">
+            <i data-lucide="gallery-vertical"></i>
+        </button>
+    </header>
+
+    <!-- হেডার (মোবাইল) -->
+    <header class="md:hidden bg-[#1a1a1a] border-b border-gray-700 px-4 py-2 flex items-center justify-between flex-shrink-0">
+        <span id="mobile-header-title" class="text-xl font-bold text-green-500">Settings</span>
+        <button id="view-all-btn-mobile" class="p-2 rounded-lg hover:bg-gray-700" aria-label="View All Generated Images">
+            <i data-lucide="gallery-vertical"></i>
+        </button>
+    </header>
+
+    <!-- মূল কন্টেন্ট -->
+    <div class="flex flex-1 overflow-hidden">
+        
+        <!-- সেটিংস প্যানেল (বাম) -->
+        <div id="settings-panel-wrapper" class="w-full md:w-96 md:flex-shrink-0 bg-[#1a1a1a] border-r border-gray-700 overflow-y-auto">
+            <div id="settings-panel" class="flex flex-col h-full">
+                
+                <!-- মোবাইল ট্যাব বাটন -->
+                <div class="md:hidden flex border-b border-gray-700">
+                    <button id="tab-settings" class="flex-1 p-3 text-center font-semibold bg-gray-800 border-b-2 border-green-500">Settings</button>
+                    <button id="tab-output" class="flex-1 p-3 text-center font-semibold text-gray-400">Output</button>
+                </div>
+                
+                <!-- সেটিংস কন্টেন্ট (স্ক্রলযোগ্য) -->
+                <div class="p-4 space-y-6 flex-1 overflow-y-auto">
+                    
+                    <!-- মূল প্রম্পট বক্স -->
+                    <div class="prompt-container">
+                        <label for="prompt" class="block text-sm font-medium text-gray-300 mb-1">Prompt</label>
+                        <div class="prompt-buttons">
+                            <!-- প্রম্পট হিস্ট্রি বাটন -->
+                            <button id="prompt-history-btn" class="p-1.5 bg-gray-600 rounded-md hover:bg-gray-500" aria-label="Prompt History">
+                                <i data-lucide="history" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <!-- এনহ্যান্স বাটন -->
+                            <button id="enhance-btn" class="p-1.5 bg-gray-600 rounded-md hover:bg-gray-500" aria-label="Enhance Prompt">
+                                <i data-lucide="magic-wand-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <!-- কপি বাটন -->
+                            <button id="copy-btn" class="p-1.5 bg-gray-600 rounded-md hover:bg-gray-500" aria-label="Copy Prompt">
+                                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <!-- পেস্ট বাটন -->
+                            <button id="paste-btn" class="p-1.5 bg-gray-600 rounded-md hover:bg-gray-500" aria-label="Paste Prompt">
+                                <i data-lucide="clipboard-paste" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <!-- ক্লিন বাটন -->
+                            <button id="clean-btn" class="p-1.5 bg-gray-600 rounded-md hover:bg-gray-500" aria-label="Clear Prompt">
+                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                        <!-- প্রম্পট হিস্ট্রি ড্রপডাউন -->
+                        <div id="prompt-history-dropdown" class="dropdown-menu">
+                            <!-- আইটেমগুলো এখানে জাভাস্ক্রিপ্ট দিয়ে যোগ হবে -->
+                        </div>
+                        <textarea id="prompt" rows="10" class="w-full p-2.5 bg-[#252525] border border-gray-600 rounded-lg text-[11px] text-gray-200 focus:ring-2 focus:ring-green-500 focus:border-green-500 prompt-textarea" placeholder="A futuristic city with flying cars..."></textarea>
+                    </div>
+
+                    <!-- নেগেটিভ প্রম্পট বক্স -->
+                    <div class="prompt-container">
+                        <label for="negative-prompt" class="block text-sm font-medium text-gray-300 mb-1">Negative Prompt</label>
+                        <div class="prompt-buttons">
+                            <!-- কপি বাটন -->
+                            <button id="copy-neg-btn" class="p-1.5 bg-gray-600 rounded-md hover:bg-gray-500" aria-label="Copy Negative Prompt">
+                                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <!-- পেস্ট বাটন -->
+                            <button id="paste-neg-btn" class="p-1.5 bg-gray-600 rounded-md hover:bg-gray-500" aria-label="Paste Negative Prompt">
+                                <i data-lucide="clipboard-paste" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <!-- ক্লিন বাটন -->
+                            <button id="clean-neg-btn" class="p-1.5 bg-gray-600 rounded-md hover:bg-gray-500" aria-label="Clear Negative Prompt">
+                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                        <textarea id="negative-prompt" rows="3" class="w-full p-2.5 bg-[#252525] border border-gray-600 rounded-lg text-[11px] text-gray-200 focus:ring-2 focus:ring-green-500 focus:border-green-500 prompt-textarea" placeholder="blurry, bad quality, extra limbs..."></textarea>
+                    </div>
+
+                    <!-- ইমেজ ইনপুট -->
+                    <div>
+                        <label for="image-input" class="block text-sm font-medium text-gray-300 mb-2">Image Input (Optional)</label>
+                        <button id="image-input-label" class="w-full h-32 border-2 border-dashed border-gray-600 rounded-lg flex flex-col items-center justify-center hover:border-gray-500 cursor-pointer">
+                            <i data-lucide="image-plus" class="w-8 h-8 text-gray-500"></i>
+                            <span class="text-sm text-gray-500 mt-2">Upload Images</span>
+                        </button>
+                        <input type="file" id="image-input" multiple accept="image/*" class="hidden">
+                        
+                        <!-- আপলোড করা ছবির প্রিভিউ -->
+                        <div id="image-preview-container" class="mt-4 grid grid-cols-3 gap-2">
+                            <!-- প্রিভিউ ছবি এখানে যোগ হবে -->
+                        </div>
+                        
+                        <button id="clear-images-btn" class="hidden w-full mt-2 text-sm text-red-400 hover:text-red-300">Clear All Images</button>
+                    </div>
+
+                    <!-- প্রিসেট ড্রপডাউন -->
+                    <div>
+                        <label for="preset-select" class="block text-sm font-medium text-gray-300 mb-1">Select a Preset</label>
+                        <select id="preset-select" class="w-full p-2.5 bg-[#252525] border border-gray-600 rounded-lg text-sm text-gray-200 focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                            <!-- প্রিসেট অপশনগুলো এখানে জাভাস্ক্রিপ্ট দিয়ে যোগ হবে -->
+                        </select>
+                    </div>
+
+                    <!-- ছবির সংখ্যা -->
+                    <div>
+                        <label for="image-count" class="block text-sm font-medium text-gray-300 mb-1">Number of Images</label>
+                        <select id="image-count" class="w-full p-2.5 bg-[#252525] border border-gray-600 rounded-lg text-sm text-gray-200 focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                            <option value="7">7</option>
+                            <option value="8">8</option>
+                            <option value="9">9</option>
+                            <option value="10">10</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- জেনারেট বাটন (নিচে স্থির) -->
+                <div class="p-4 bg-[#1a1a1a] border-t border-gray-700 flex-shrink-0">
+                    <button id="generate-btn" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-500 transition-all duration-200 btn-glow focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-75 disabled:bg-gray-500 disabled:cursor-not-allowed disabled:animation-none">
+                        Generate
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- আউটপুট প্যানেল (ডান) -->
+        <div id="output-panel" class="hidden md:flex flex-1 flex-col bg-[#121212] overflow-hidden">
+            
+            <!-- জেনারেট করা ছবি -->
+            <div id="image-output-wrapper" class="flex-1 flex items-center justify-center p-6 overflow-auto relative">
+                <!-- মেসেজ বক্স -->
+                <div id="message-box" class="hidden absolute top-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg z-20">
+                    <span id="message-text"></span>
+                    <button id="message-close-btn" class="ml-2 font-bold">&times;</button>
+                </div>
+                
+                <!-- লোডার -->
+                <div id="loader" class="hidden text-center">
+                    <div class="spinner"></div>
+                    <p class="mt-4 text-gray-400">Generating images...</p>
+                </div>
+                
+                <!-- প্লেসহোল্ডার -->
+                <div id="placeholder" class="text-center text-gray-600">
+                    <i data-lucide="image" class="w-32 h-32 mx-auto"></i>
+                    <p class="mt-4">Your generated images will appear here</p>
+                </div>
+                
+                <!-- ছবি -->
+                <div id="image-container" class="relative group">
+                    <img id="generated-image" src="" alt="Generated image" class="rounded-lg shadow-lg object-contain w-full h-full">
+                    <!-- ডাউনলোড বাটন (পরিবর্তিত) -->
+                    <a id="download-btn" href="#" download="generated_image.png" class="absolute top-4 right-4 bg-black bg-opacity-50 text-white p-2.5 rounded-full hover:bg-opacity-75 transition-all opacity-100 hidden" aria-label="Download Image">
+                        <i data-lucide="download" class="w-6 h-6"></i>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- হিস্ট্রি সেকশন -->
+            <div class="flex-shrink-0 bg-[#1a1a1a] border-t border-gray-700 p-4">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-lg font-semibold">History</h3>
+                    <button id="view-all-btn" class="text-sm text-green-400 hover:text-green-300">View All</button>
+                </div>
+                <div id="history-container" class="flex space-x-3 overflow-x-auto pb-2">
+                    <!-- হিস্ট্রি আইটেম এখানে যোগ হবে -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- "View All" গ্যালারি মোডাল -->
+    <div id="gallery-modal" class="fixed inset-0 bg-black bg-opacity-90 z-40 hidden p-8 overflow-y-auto">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-3xl font-bold text-white">All Generated Images</h2>
+            <button id="gallery-close-btn" class="p-2 rounded-full hover:bg-gray-700">
+                <i data-lucide="x" class="w-8 h-8 text-white"></i>
+            </button>
+        </div>
+        <div id="gallery-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+            <!-- গ্যালারি আইটেম এখানে যোগ হবে -->
+        </div>
+    </div>
+    
+    <!-- "Image Detail" প্রিভিউ মোডাল -->
+    <div id="image-detail-modal" class="fixed inset-0 bg-black bg-opacity-90 z-50 hidden flex items-center justify-center p-4">
+        <button id="detail-close-btn" class="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-700 z-50" aria-label="Close">
+            <i data-lucide="x" class="w-8 h-8 text-white"></i>
+        </button>
+        
+        <div class="relative w-full h-full max-w-7xl flex flex-col md:flex-row bg-[#1a1a1a] rounded-lg overflow-hidden">
+            <!-- ছবি প্রিভিউ (বাম) -->
+            <div class="relative flex-1 flex items-center justify-center bg-black overflow-hidden">
+                <img id="detail-image" src="" alt="Detail view" class="object-contain w-full h-full max-h-[80vh] md:max-h-full">
+                
+                <!-- নেভিগেশন বাটন -->
+                <button id="detail-prev-btn" class="absolute left-4 p-3 bg-black bg-opacity-50 rounded-full text-white hover:bg-opacity-75 disabled:opacity-30 disabled:cursor-not-allowed" aria-label="Previous Image">
+                    <i data-lucide="chevron-left" class="w-7 h-7"></i>
+                </button>
+                <button id="detail-next-btn" class="absolute right-4 p-3 bg-black bg-opacity-50 rounded-full text-white hover:bg-opacity-75 disabled:opacity-30 disabled:cursor-not-allowed" aria-label="Next Image">
+                    <i data-lucide="chevron-right" class="w-7 h-7"></i>
+                </button>
+            </div>
+            
+            <!-- ডিটেইলস প্যানেল (ডান) -->
+            <div class="w-full md:w-80 lg:w-96 flex-shrink-0 bg-[#1f1f1f] p-6 flex flex-col overflow-y-auto">
+                <h3 class="text-xl font-semibold mb-4 text-white">Details</h3>
+                
+                <div class="space-y-4 flex-1">
+                    <div>
+                        <label class="text-sm font-medium text-gray-400">Prompt</label>
+                        <p id="detail-prompt" class="mt-1 text-sm text-gray-200 bg-[#252525] p-3 rounded-lg max-h-40 overflow-y-auto"></p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-gray-400">Negative Prompt</label>
+                        <p id="detail-negative-prompt" class="mt-1 text-sm text-gray-200 bg-[#252525] p-3 rounded-lg max-h-20 overflow-y-auto"></p>
+                    </div>
+                </div>
+                
+                <div class="mt-6 space-y-3">
+                    <a id="detail-download-btn" href="#" download="generated_image.png" class="flex items-center justify-center w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-500 transition-all duration-200">
+                        <i data-lucide="download" class="w-5 h-5 mr-2"></i>
+                        Download
+                    </a>
+                    <button id="detail-delete-btn" class="flex items-center justify-center w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-red-500 transition-all duration-200">
+                        <i data-lucide="trash-2" class="w-5 h-5 mr-2"></i>
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- জাভাস্ক্রিপ্ট -->
+    <script type="module">
+        // লুসাইড আইকন চালু করা
+        lucide.createIcons();
+
+        // DOM এলিমেন্টগুলো সিলেক্ট করা
+        const settingsPanelWrapper = document.getElementById('settings-panel-wrapper');
+        const outputPanel = document.getElementById('output-panel');
+        const tabSettings = document.getElementById('tab-settings');
+        const tabOutput = document.getElementById('tab-output');
+        const mobileHeaderTitle = document.getElementById('mobile-header-title');
+        
+        const promptInput = document.getElementById('prompt');
+        const negativePromptInput = document.getElementById('negative-prompt');
+        const generateBtn = document.getElementById('generate-btn');
+        const loader = document.getElementById('loader');
+        const placeholder = document.getElementById('placeholder');
+        const imageContainer = document.getElementById('image-container');
+        const generatedImage = document.getElementById('generated-image');
+        const downloadBtn = document.getElementById('download-btn');
+        
+        const historyContainer = document.getElementById('history-container');
+        const viewAllBtn = document.getElementById('view-all-btn');
+        const viewAllBtnDesktop = document.getElementById('view-all-btn-desktop');
+        const viewAllBtnMobile = document.getElementById('view-all-btn-mobile');
+        
+        const galleryModal = document.getElementById('gallery-modal');
+        const galleryCloseBtn = document.getElementById('gallery-close-btn');
+        const galleryGrid = document.getElementById('gallery-grid');
+        
+        const imageDetailModal = document.getElementById('image-detail-modal');
+        const detailCloseBtn = document.getElementById('detail-close-btn');
+        const detailImage = document.getElementById('detail-image');
+        const detailPrompt = document.getElementById('detail-prompt');
+        const detailNegativePrompt = document.getElementById('detail-negative-prompt');
+        const detailDownloadBtn = document.getElementById('detail-download-btn');
+        const detailDeleteBtn = document.getElementById('detail-delete-btn');
+        const detailPrevBtn = document.getElementById('detail-prev-btn');
+        const detailNextBtn = document.getElementById('detail-next-btn');
+
+        const messageBox = document.getElementById('message-box');
+        const messageText = document.getElementById('message-text');
+        const messageCloseBtn = document.getElementById('message-close-btn');
+        
+        const enhanceBtn = document.getElementById('enhance-btn');
+        
+        const copyBtn = document.getElementById('copy-btn');
+        const pasteBtn = document.getElementById('paste-btn');
+        const cleanBtn = document.getElementById('clean-btn');
+        
+        const copyNegBtn = document.getElementById('copy-neg-btn');
+        const pasteNegBtn = document.getElementById('paste-neg-btn');
+        const cleanNegBtn = document.getElementById('clean-neg-btn');
+
+        const imageInput = document.getElementById('image-input');
+        const imageInputLabel = document.getElementById('image-input-label');
+        const imagePreviewContainer = document.getElementById('image-preview-container');
+        const clearImagesBtn = document.getElementById('clear-images-btn');
+
+        const imageCountSelect = document.getElementById('image-count');
+
+        const promptHistoryBtn = document.getElementById('prompt-history-btn');
+        const promptHistoryDropdown = document.getElementById('prompt-history-dropdown');
+        
+        const presetSelect = document.getElementById('preset-select'); // নতুন প্রিসেট ড্রপডাউন
+
+        // গ্লোবাল ভেরিয়েবল
+        let imageHistory = []; // { id, src, prompt, negativePrompt, base64 }
+        let promptHistory = []; // string[]
+        let currentDetailIndex = -1;
+        let uploadedImagesBase64 = []; // string[]
+        const apiKey = ""; // API কী এখানে দিন (যদি প্রয়োজন হয়)
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`;
+
+        // প্রিসেট তালিকা (আপনার অনুরোধ অনুযায়ী আপডেট করা)
+        const presets = [
+            { name: "Auto (Default)", prompt: "", negativePrompt: "" },
+            { name: "Low Poly 3D", prompt: ", low poly 3d render, isometric, simple, vibrant colors", negativePrompt: "photorealistic, detailed, complex, blurry" },
+            { name: "3D Render", prompt: ", 3d render, blender, octane render, detailed", negativePrompt: "2d, flat, drawing, sketch, blurry" },
+            { name: "Oil Painting", prompt: ", oil painting, masterpiece, thick brush strokes, detailed", negativePrompt: "photograph, realistic, 3d render, blurry" },
+            { name: "Cyberpunk Neon", prompt: ", cyberpunk style, neon lights, futuristic city, detailed", negativePrompt: "natural, day, historical, blurry, dull" },
+            { name: "Watercolor", prompt: ", watercolor painting, soft, blended colors, paper texture", negativePrompt: "photograph, realistic, sharp, 3d render" },
+            { name: "Cinematic", prompt: ", cinematic shot, detailed, 8k, photorealistic", negativePrompt: "cartoon, anime, drawing, sketch, blurry" },
+            { name: "Anime", prompt: ", anime style, key visual, beautiful, detailed", negativePrompt: "photograph, real, 3d, blurry, watermark" },
+            { name: "Photorealistic", prompt: ", photorealistic, realistic, 8k, sharp focus", negativePrompt: "anime, cartoon, drawing, painting, 3d" },
+        ];
+
+        // --- ফাংশন ---
+        
+        // মেসেজ দেখানো
+        function showMessage(message, isError = true) {
+            messageText.textContent = message;
+            messageBox.className = `absolute top-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg shadow-lg z-20 ${isError ? 'bg-red-600' : 'bg-green-600'} text-white`;
+            messageBox.classList.remove('hidden');
+            // ৩ সেকেন্ড পর স্বয়ংক্রিয়ভাবে হাইড হবে
+            setTimeout(() => {
+                messageBox.classList.add('hidden');
+            }, 3000);
+        }
+        
+        // মেসেজ বক্স বন্ধ করা
+        messageCloseBtn.addEventListener('click', () => {
+            messageBox.classList.add('hidden');
+        });
+
+        // প্রম্পট এনহ্যান্স করা
+        async function enhancePrompt() {
+            const currentPrompt = promptInput.value;
+            if (!currentPrompt) {
+                showMessage("Please enter a prompt to enhance.");
+                return;
+            }
+            
+            setLoading(true, "Enhancing prompt...");
+            
+            try {
+                const enhanceApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                const systemPrompt = "You are a prompt enhancer. Take the user's prompt and make it more detailed, vivid, and descriptive for an image generation model. Respond with only the enhanced prompt.";
+                
+                const payload = {
+                    contents: [{ parts: [{ text: currentPrompt }] }],
+                    systemInstruction: {
+                        parts: [{ text: systemPrompt }]
+                    },
+                };
+
+                const response = await fetchWithBackoff(enhanceApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API request failed with status ${response.status}`);
+                }
+
+                const result = await response.json();
+                const enhancedPrompt = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (enhancedPrompt) {
+                    promptInput.value = enhancedPrompt;
+                    showMessage("Prompt enhanced!", false);
+                } else {
+                    throw new Error("Failed to enhance prompt. No text returned.");
+                }
+
+            } catch (error) {
+                console.error("Enhance error:", error);
+                showMessage(`Error enhancing prompt: ${error.message}`);
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        // API কল (এক্সপোনেনশিয়াল ব্যাকঅফ সহ)
+        async function fetchWithBackoff(url, options, maxRetries = 3) {
+            let delay = 1000;
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.status === 429) { // Too Many Requests
+                        throw new Error('Rate limited');
+                    }
+                    return response;
+                } catch (error) {
+                    if (error.message === 'Rate limited' && i < maxRetries - 1) {
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2;
+                    } else {
+                        throw error;
+                    }
+                }
+            }
+        }
+
+        // ছবি জেনারেট করা (মূল ফাংশন) - আপনার অনুরোধ অনুযায়ী পরিবর্তিত
+        async function generateImage() {
+            const userPrompt = promptInput.value; // ব্যবহারকারীর লেখা প্রম্পট
+            const userNegativePrompt = negativePromptInput.value; // ব্যবহারকারীর লেখা নেগেটিভ প্রম্পট
+            
+            // সিলেক্ট করা প্রিসেট
+            const selectedPresetIndex = parseInt(presetSelect.value, 10);
+            const selectedPreset = presets[selectedPresetIndex];
+            
+            // API-এর জন্য চূড়ান্ত প্রম্পট তৈরি করা (ব্যবহারকারীর + প্রিসেটের)
+            // প্রিসেট প্রম্পটটি ব্যবহারকারীর প্রম্পটের সাথে যোগ করা হবে
+            const finalApiPrompt = (userPrompt + selectedPreset.prompt).trim();
+            // প্রিসেট নেগেটিভ প্রম্পটটি ব্যবহারকারীর নেগেটিভ প্রম্পটের সাথে যোগ করা হবে
+            const finalApiNegativePrompt = (userNegativePrompt + " " + selectedPreset.negativePrompt).trim();
+            
+            let imageCount;
+
+            // যদি ছবি আপলোড করা থাকে, সংখ্যা ১-এ সীমাবদ্ধ
+            if (uploadedImagesBase64.length > 0) {
+                imageCount = 1;
+                imageCountSelect.value = "1";
+                imageCountSelect.disabled = true;
+            } else {
+                imageCount = parseInt(imageCountSelect.value, 10);
+                imageCountSelect.disabled = false;
+            }
+            
+            // ব্যবহারকারীর প্রম্পট চেক করা
+            if (!userPrompt && uploadedImagesBase64.length === 0) {
+                showMessage("Please enter a prompt or upload an image.");
+                return;
+            }
+
+            setLoading(true);
+            addPromptToHistory(userPrompt); // শুধু ব্যবহারকারীর প্রম্পট হিস্ট্রিতে যোগ করা
+            let generatedImageCount = 0;
+
+            try {
+                for (let i = 0; i < imageCount; i++) {
+                    // API পেলোড তৈরি করা (চূড়ান্ত প্রম্পট দিয়ে)
+                    const payload = createApiPayload(finalApiPrompt, finalApiNegativePrompt);
+                    
+                    const response = await fetchWithBackoff(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errorBody = await response.text();
+                        throw new Error(`API request failed: ${response.status} ${response.statusText}. Body: ${errorBody}`);
+                    }
+
+                    const result = await response.json();
+                    
+                    const base64Data = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+                    const errorText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                    if (base64Data) {
+                        const imageUrl = `data:image/png;base64,${base64Data}`;
+                        const newImage = {
+                            id: Date.now() + i,
+                            src: imageUrl,
+                            prompt: userPrompt, // হিস্ট্রিতে শুধু ব্যবহারকারীর প্রম্পট সেভ করা
+                            negativePrompt: userNegativePrompt, // হিস্ট্রিতে শুধু ব্যবহারকারীর নেগেটিভ প্রম্পট সেভ করা
+                            base64: base64Data
+                        };
+                        
+                        imageHistory.unshift(newImage);
+                        
+                        if (i === 0) {
+                            showImage(newImage);
+                        }
+                        generatedImageCount++;
+                    } else {
+                        const safetyFeedback = result.candidates?.[0]?.safetyRatings;
+                        let errorMessage = "API response did not contain a valid image.";
+                        if (errorText) {
+                            errorMessage = `API returned text: "${errorText}"`;
+                        } else if (safetyFeedback) {
+                            errorMessage = `Request blocked by safety policy: ${safetyFeedback.map(r => r.category).join(', ')}`;
+                        }
+                        showMessage(errorMessage);
+                        if (i === 0) break; 
+                    }
+                }
+            } catch (error) {
+                console.error("Generate error:", error);
+                showMessage(`Error generating image: ${error.message}`);
+            } finally {
+                setLoading(false);
+                if (generatedImageCount > 0) {
+                    updateHistory();
+                    updateGallery();
+                }
+                if (window.innerWidth < 768) {
+                    showView('output');
+                }
+            }
+        }
+        
+        // API পেলোড তৈরি করা
+        function createApiPayload(prompt, negativePrompt) {
+            let fullPrompt = prompt;
+            if (negativePrompt) {
+                fullPrompt += ` | Negative prompt: ${negativePrompt}`;
+            }
+
+            const parts = [{ text: fullPrompt }];
+            
+            uploadedImagesBase64.forEach(base64Data => {
+                parts.push({
+                    inlineData: {
+                        mimeType: "image/png",
+                        data: base64Data
+                    }
+                });
+            });
+
+            return {
+                contents: [{ role: "user", parts: parts }],
+                generationConfig: {
+                    responseModalities: ['TEXT', 'IMAGE']
+                },
+            };
+        }
+
+        // লোডিং স্টেট সেট করা
+        function setLoading(isLoading, message = "Generating images...") {
+            generateBtn.disabled = isLoading;
+            generateBtn.textContent = isLoading ? "Generating..." : "Generate";
+            
+            if (isLoading) {
+                loader.querySelector('p').textContent = message;
+                loader.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+                imageContainer.classList.add('hidden');
+            } else {
+                loader.classList.add('hidden');
+                if (!generatedImage.src) {
+                    placeholder.classList.remove('hidden');
+                }
+            }
+        }
+
+        // জেনারেট করা ছবি দেখানো
+        function showImage(image) {
+            generatedImage.src = image.src;
+            downloadBtn.href = image.src;
+            placeholder.classList.add('hidden');
+            imageContainer.classList.remove('hidden');
+            downloadBtn.classList.remove('hidden');
+        }
+
+        // হিস্ট্রি সেকশন আপডেট করা
+        function updateHistory() {
+            historyContainer.innerHTML = "";
+            const historyToShow = imageHistory.slice(0, 10);
+            historyToShow.forEach((image, index) => {
+                const imgEl = document.createElement('img');
+                imgEl.src = image.src;
+                imgEl.alt = image.prompt.substring(0, 30);
+                imgEl.className = "w-20 h-20 object-cover rounded-lg cursor-pointer hover:scale-105 transition-transform";
+                imgEl.onclick = () => showImageDetail(image.id);
+                historyContainer.appendChild(imgEl);
+            });
+        }
+        
+        // "View All" গ্যালারি আপডেট করা
+        function updateGallery() {
+            galleryGrid.innerHTML = "";
+            imageHistory.forEach((image, index) => {
+                const imgEl = document.createElement('img');
+                imgEl.src = image.src;
+                imgEl.alt = image.prompt.substring(0, 30);
+                imgEl.className = "w-full h-32 object-cover rounded-lg cursor-pointer hover:scale-105 transition-transform";
+                imgEl.onclick = () => showImageDetail(image.id);
+                galleryGrid.appendChild(imgEl);
+            });
+        }
+        
+        // "Image Detail" মোডাল দেখানো
+        function showImageDetail(imageId) {
+            const imageIndex = imageHistory.findIndex(img => img.id === imageId);
+            if (imageIndex === -1) return;
+            
+            currentDetailIndex = imageIndex;
+            updateDetailModalContent();
+            imageDetailModal.classList.remove('hidden');
+        }
+        
+        // "Image Detail" মোডাল কনটেন্ট আপডেট করা
+        function updateDetailModalContent() {
+            if (currentDetailIndex === -1 || currentDetailIndex >= imageHistory.length) return;
+            
+            const image = imageHistory[currentDetailIndex];
+            detailImage.src = image.src;
+            detailPrompt.textContent = image.prompt || "No prompt provided";
+            detailNegativePrompt.textContent = image.negativePrompt || "None";
+            detailDownloadBtn.href = image.src;
+            
+            detailPrevBtn.disabled = currentDetailIndex === imageHistory.length - 1;
+            detailNextBtn.disabled = currentDetailIndex === 0;
+        }
+
+        // ছবি ডিলিট করা
+        function deleteImage() {
+            if (currentDetailIndex === -1 || currentDetailIndex >= imageHistory.length) return;
+            
+            const imageId = imageHistory[currentDetailIndex].id;
+            imageHistory = imageHistory.filter(img => img.id !== imageId);
+            
+            updateHistory();
+            updateGallery();
+            
+            imageDetailModal.classList.add('hidden');
+            currentDetailIndex = -1;
+            
+            if (generatedImage.src === detailImage.src) {
+                generatedImage.src = "";
+                imageContainer.classList.add('hidden');
+                downloadBtn.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+            }
+        }
+        
+        // প্রম্পট হিস্ট্রি আপডেট করা
+        function addPromptToHistory(prompt) {
+            if (!prompt || promptHistory.includes(prompt)) return;
+            promptHistory.unshift(prompt);
+            if (promptHistory.length > 20) {
+                promptHistory.pop();
+            }
+            updatePromptHistoryDropdown();
+        }
+        
+        // প্রম্পট হিস্ট্রি ড্রপডাউন আপডেট করা
+        function updatePromptHistoryDropdown() {
+            promptHistoryDropdown.innerHTML = "";
+            if (promptHistory.length === 0) {
+                promptHistoryDropdown.innerHTML = `<div class="dropdown-item">No history</div>`;
+                return;
+            }
+            promptHistory.forEach(prompt => {
+                const item = document.createElement('div');
+                item.className = "dropdown-item";
+                item.textContent = prompt.length > 100 ? prompt.substring(0, 100) + '...' : prompt;
+                item.onclick = () => {
+                    promptInput.value = prompt;
+                    promptHistoryDropdown.classList.remove('show');
+                };
+                promptHistoryDropdown.appendChild(item);
+            });
+        }
+        
+        // প্রিসেট ড্রপডাউন লোড করা (<select> এর জন্য)
+        function loadPresetsDropdown() {
+            presetSelect.innerHTML = "";
+            presets.forEach((preset, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = preset.name;
+                presetSelect.appendChild(option);
+            });
+        }
+        
+        // ছবি আপলোড হ্যান্ডেল করা
+        function handleImageUpload(event) {
+            const files = event.target.files;
+            if (!files) return;
+            
+            imageCountSelect.value = "1";
+            imageCountSelect.disabled = true;
+
+            clearUploadedImages();
+
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const base64Data = e.target.result.split(',')[1];
+                    uploadedImagesBase64.push(base64Data);
+                    
+                    const imgEl = document.createElement('img');
+                    imgEl.src = e.target.result;
+                    imgEl.className = "w-full h-16 object-cover rounded-lg";
+                    imagePreviewContainer.appendChild(imgEl);
+                };
+                reader.readAsDataURL(file);
+            });
+            
+            clearImagesBtn.classList.remove('hidden');
+        }
+        
+        // আপলোড করা ছবি মুছে ফেলা
+        function clearUploadedImages() {
+            uploadedImagesBase64 = [];
+            imagePreviewContainer.innerHTML = "";
+            clearImagesBtn.classList.add('hidden');
+            imageInput.value = "";
+            
+            imageCountSelect.disabled = false;
+        }
+
+        // --- ইভেন্ট লিসেনার ---
+
+        generateBtn.addEventListener('click', generateImage);
+        enhanceBtn.addEventListener('click', enhancePrompt);
+
+        // মোবাইল ট্যাব নেভিগেশন
+        function showView(viewName) {
+            if (viewName === 'settings') {
+                settingsPanelWrapper.classList.remove('hidden');
+                outputPanel.classList.add('hidden');
+                tabSettings.classList.add('bg-gray-800', 'border-green-500');
+                tabSettings.classList.remove('text-gray-400');
+                tabOutput.classList.add('text-gray-400');
+                tabOutput.classList.remove('bg-gray-800', 'border-green-500');
+                mobileHeaderTitle.textContent = "Settings";
+            } else { // 'output'
+                settingsPanelWrapper.classList.add('hidden');
+                outputPanel.classList.remove('hidden');
+                tabOutput.classList.add('bg-gray-800', 'border-green-500');
+                tabOutput.classList.remove('text-gray-400');
+                tabSettings.classList.add('text-gray-400');
+                tabSettings.classList.remove('bg-gray-800', 'border-green-500');
+                mobileHeaderTitle.textContent = "Output";
+            }
+        }
+
+        tabSettings.addEventListener('click', () => showView('settings'));
+        tabOutput.addEventListener('click', () => showView('output'));
+
+        // "View All" গ্যালারি মোডাল খোলা/বন্ধ করা
+        const openGalleryModal = () => galleryModal.classList.remove('hidden');
+        const closeGalleryModal = () => galleryModal.classList.add('hidden');
+        
+        viewAllBtn.addEventListener('click', openGalleryModal);
+        viewAllBtnDesktop.addEventListener('click', openGalleryModal);
+        viewAllBtnMobile.addEventListener('click', openGalleryModal);
+        galleryCloseBtn.addEventListener('click', closeGalleryModal);
+
+        // "Image Detail" মোডাল বন্ধ করা
+        detailCloseBtn.addEventListener('click', () => imageDetailModal.classList.add('hidden'));
+        
+        detailPrevBtn.addEventListener('click', () => {
+            if (currentDetailIndex < imageHistory.length - 1) {
+                currentDetailIndex++;
+                updateDetailModalContent();
+            }
+        });
+        detailNextBtn.addEventListener('click', () => {
+            if (currentDetailIndex > 0) {
+                currentDetailIndex--;
+                updateDetailModalContent();
+            }
+        });
+        
+        detailDeleteBtn.addEventListener('click', deleteImage);
+
+        // প্রম্পট বক্স বাটন
+        copyBtn.addEventListener('click', () => navigator.clipboard.writeText(promptInput.value));
+        pasteBtn.addEventListener('click', async () => {
+            promptInput.value += await navigator.clipboard.readText();
+        });
+        cleanBtn.addEventListener('click', () => promptInput.value = '');
+        
+        copyNegBtn.addEventListener('click', () => navigator.clipboard.writeText(negativePromptInput.value));
+        pasteNegBtn.addEventListener('click', async () => {
+            negativePromptInput.value += await navigator.clipboard.readText();
+        });
+        cleanNegBtn.addEventListener('click', () => negativePromptInput.value = '');
+        
+        // ছবি আপলোড
+        imageInput.addEventListener('change', handleImageUpload);
+        imageInputLabel.addEventListener('click', (e) => {
+            e.preventDefault();
+            imageInput.click();
+        });
+        clearImagesBtn.addEventListener('click', clearUploadedImages);
+
+        // প্রম্পট হিস্ট্রি ড্রপডাউন
+        promptHistoryBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            promptHistoryDropdown.classList.toggle('show');
+            updatePromptHistoryDropdown();
+        });
+        
+        // প্রিসেট ড্রপডাউন (ইভেন্ট লিসেনার সরানো হয়েছে, কারণ জেনারেট বাটনেই এটি চেক করা হচ্ছে)
+
+        // বাইরে ক্লিক করলে ড্রপডাউন বন্ধ করা
+        document.addEventListener('click', (e) => {
+            if (!promptHistoryBtn.contains(e.target) && !promptHistoryDropdown.contains(e.target)) {
+                promptHistoryDropdown.classList.remove('show');
+            }
+        });
+
+        imageCountSelect.addEventListener('change', () => {
+            if (uploadedImagesBase64.length > 0) {
+                imageCountSelect.value = "1";
+                showMessage("Image-to-image generation only supports 1 image at a time.");
+            }
+        });
+
+        // অ্যাপ চালু হলে
+        loadPresetsDropdown();
+        
+        if (window.innerWidth < 768) {
+            showView('settings');
+        }
+
+    </script>
+</body>
+</html>
